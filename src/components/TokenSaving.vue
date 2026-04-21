@@ -291,7 +291,7 @@ interface MonitorData {
   compression: CompressionMetrics;
 }
 
-const POLL_INTERVAL = 300000;
+const POLL_INTERVAL = 3000;
 const { t, locale } = useI18n();
 const embedded = computed(() => props.embedded);
 
