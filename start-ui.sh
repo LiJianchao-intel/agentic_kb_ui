@@ -44,5 +44,4 @@ export VITE_DEV_STATS_API_TARGET="http://${SERVER_HOST}:${STATS_API_PORT}"
 echo "前端访问地址: http://${SERVER_HOST}:${UI_PORT}"
 
 cd "${UI_DIR}"
-npm install
 npm run dev -- --host 0.0.0.0 --port "${UI_PORT}"
