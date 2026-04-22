@@ -43,7 +43,6 @@
           <PushpinOutlined class="pin-icon" />
         </button>
       </div>
-
       <div class="panel-shell" :class="{ embedded }">
         <div class="panel-header flex-between" @mousedown="startDrag">
           <div class="header-brand flex-left">
@@ -95,35 +94,30 @@
         </div>
 
         <div class="panel-scroll" :class="{ embedded }">
-          <section class="cloud-panel section-card">
+          <section class="overall-panelsection-card">
             <div class="section-heading compact-gap flex-between">
               <div>
                 <div class="section-title">
-                  {{ t("monitor.cloudProvider") }}
+                  {{ t("monitor.overallTotals") }}
                 </div>
               </div>
             </div>
 
             <div class="compression-dashboard">
               <div class="compression-metrics-row">
-                <div class="metric-card token-consumption-card">
+                <div class="metric-card local-wrap">
                   <span class="metric-card-label">{{
-                    t("monitor.tokenConsumption")
+                    t("monitor.localShort")
                   }}</span>
-                  <span class="metric-card-value">{{
-                    tokenConsumptionText
-                  }}</span>
+                  <span class="metric-card-value">{{ localTotalText }}</span>
                 </div>
 
-                <div class="metric-card saved-token-card">
+                <div class="metric-card cloud-wrap">
                   <span class="metric-card-label">
-                    {{ t("monitor.savedTokenNoCostMain") }}
-                    <span class="metric-card-label-sub">
-                      {{ t("monitor.noCost") }}
-                    </span>
+                    {{ t("monitor.cloudShort") }}
                   </span>
                   <span class="metric-card-value">{{
-                    savedTokenNoCostText
+                    tokenConsumptionText
                   }}</span>
                 </div>
               </div>
@@ -151,18 +145,18 @@
                     />
                   </svg>
                   <div class="compression-ring-center">
-                    <span class="compression-ring-value">{{
-                      compressionRateText
-                    }}</span>
+                    <span class="compression-ring-value">
+                      {{ localShareText }}</span
+                    >
                     <span class="compression-ring-caption">{{
-                      t("monitor.saved")
+                      t("monitor.localShort")
                     }}</span>
                   </div>
                 </div>
                 <div class="total-token">
-                  {{ t("common.total") }}:
+                  {{ t("monitor.overallTotals") }}:
                   <div class="total-value">
-                    {{ originalTokensText }}
+                    {{ overallTotalText }}
                   </div>
                 </div>
               </div>
@@ -176,7 +170,7 @@
               </div>
             </div>
 
-            <div class="local-card">
+            <div class="local-card local-wrap">
               <div class="local-card-head">
                 <span class="totals-dot local"></span>
                 <span class="local-card-label">{{
@@ -187,46 +181,53 @@
             </div>
           </section>
 
-          <section class="overall-panel section-card">
+          <section class="section-card cloud-panel">
             <div class="section-heading compact-gap flex-between">
               <div>
                 <div class="section-title">
-                  {{ t("monitor.overallTotals") }}
+                  {{ t("monitor.cloudProvider") }}
                 </div>
               </div>
             </div>
 
-            <div class="overall-card enhanced">
+            <div class="cloud-card cloud-consumption">
               <div class="overall-copy">
                 <span class="overall-label">
                   <span class="totals-dot overall"></span>
-                  {{ t("monitor.overallTotals") }}
+                  {{ t("common.total") }}
                 </span>
-                <span class="overall-value">{{ overallTotalText }}</span>
+                <span class="overall-value">{{ originalTokensText }}</span>
               </div>
               <div class="overall-stack">
-                <div class="overall-stack-track enhanced">
-                  <div
-                    class="overall-segment local"
-                    :style="{ width: `${localShareOfOverall}%` }"
-                  ></div>
+                <div class="overall-stack-track">
                   <div
                     class="overall-segment cloud"
-                    :style="{ width: `${cloudShareOfOverall}%` }"
+                    :style="{ width: `${compressionRateValue}%` }"
+                  ></div>
+                  <div
+                    class="overall-segment saved"
+                    :style="{ width: `${savedTokenRateValue}%` }"
                   ></div>
                 </div>
                 <div class="overall-legend">
-                  <span class="legend-chip local">
+                  <span class="legend-chip consumption">
                     <span class="legend-chip-label">{{
-                      t("monitor.localShort")
+                      t("monitor.tokenConsumption")
                     }}</span>
-                    <span class="legend-chip-value">{{ localShareText }}</span>
+                    <span class="legend-chip-value">{{
+                      compressionRateText
+                    }}</span>
                   </span>
-                  <span class="legend-chip cloud">
-                    <span class="legend-chip-label">{{
-                      t("monitor.cloudShort")
+                  <span class="legend-chip saved-wrap">
+                    <span class="legend-chip-label">
+                      {{ t("monitor.savedTokenNoCostMain") }}
+                      <span class="metric-card-label-sub">
+                        {{ t("monitor.noCost") }}
+                      </span></span
+                    >
+                    <span class="legend-chip-value">{{
+                      savedTokenRateText
                     }}</span>
-                    <span class="legend-chip-value">{{ cloudShareText }}</span>
                   </span>
                 </div>
               </div>
@@ -291,7 +292,7 @@ interface MonitorData {
   compression: CompressionMetrics;
 }
 
-const POLL_INTERVAL = 3000;
+const POLL_INTERVAL = 2000;
 const { t, locale } = useI18n();
 const embedded = computed(() => props.embedded);
 
@@ -419,6 +420,7 @@ const normalizeMonitorData = (payload: any): MonitorData => {
     compression: normalizeCompressionMetrics(stats?.compression),
   };
 };
+
 const fetchStats = async (showRefreshing = false) => {
   if (showRefreshing) {
     isRefreshing.value = true;
@@ -486,6 +488,7 @@ const originalTokensText = computed(() =>
     monitorData.value.compression.total_input.original_tokens,
   ),
 );
+
 const tokenConsumptionText = computed(() =>
   formatCompactNumber(
     monitorData.value.compression.total_input.compressed_tokens,
@@ -497,6 +500,15 @@ const savedTokenNoCostText = computed(() =>
   ),
 );
 const compressionRateValue = computed(() => {
+  const savePct = monitorData.value.compression.total_input.rest_pct;
+
+  if (savePct > 0) {
+    return savePct;
+  }
+
+  return Math.max(0, 100 - monitorData.value.compression.total_input.save_pct);
+});
+const savedTokenRateValue = computed(() => {
   const savePct = monitorData.value.compression.total_input.save_pct;
 
   if (savePct > 0) {
@@ -507,6 +519,9 @@ const compressionRateValue = computed(() => {
 });
 const compressionRateText = computed(() =>
   formatPercent(compressionRateValue.value),
+);
+const savedTokenRateText = computed(() =>
+  formatPercent(savedTokenRateValue.value),
 );
 const ringRadius = 46;
 const ringCircumference = 2 * Math.PI * ringRadius;
@@ -728,7 +743,7 @@ onBeforeUnmount(() => {
   content: "";
   position: absolute;
   inset: 0;
-  background: var(--monitor-primary-soft);
+  background: var(--monitor-success-soft);
   opacity: 0.42;
   pointer-events: none;
 }
@@ -737,7 +752,7 @@ onBeforeUnmount(() => {
 .floating-trigger:focus-visible {
   width: 180px;
   transform: translateY(-50%);
-  border-color: var(--monitor-primary);
+  border-color: var(--monitor-success);
   box-shadow: var(--monitor-panel-shadow-hover);
   outline: none;
 }
@@ -749,8 +764,8 @@ onBeforeUnmount(() => {
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  background: var(--monitor-primary-soft);
-  color: var(--monitor-primary);
+  background: var(--monitor-success-soft);
+  color: var(--monitor-success);
   box-shadow: inset 0 0 0 1px var(--monitor-border-accent);
 }
 
@@ -824,9 +839,9 @@ onBeforeUnmount(() => {
 }
 
 .rail-button.active {
-  color: var(--monitor-primary);
+  color: var(--monitor-success);
   border-color: var(--monitor-border-accent);
-  background: var(--monitor-primary-soft);
+  background: var(--monitor-success-soft);
 }
 
 .pin-icon {
@@ -875,8 +890,9 @@ onBeforeUnmount(() => {
   width: 40px;
   height: 40px;
   border-radius: 14px;
-  background: var(--monitor-primary-soft);
-  color: var(--monitor-primary);
+  background: var(--monitor-success-soft);
+  border: 1px solid var(--monitor-border-accent);
+  color: var(--monitor-success);
   font-size: 20px;
 }
 
@@ -918,17 +934,17 @@ onBeforeUnmount(() => {
 .action-danger {
   color: color-mix(
     in srgb,
-    var(--monitor-cloud) 74%,
+    var(--monitor-danger) 74%,
     var(--font-text-color) 26%
   );
   border-color: color-mix(
     in srgb,
-    var(--monitor-cloud) 24%,
+    var(--monitor-danger) 24%,
     var(--monitor-border) 76%
   );
   background: color-mix(
     in srgb,
-    var(--monitor-cloud-soft) 56%,
+    var(--monitor-danger-soft) 56%,
     var(--monitor-surface) 44%
   );
 }
@@ -986,6 +1002,7 @@ onBeforeUnmount(() => {
 
 .assistant-panel.is-embedded .panel-title {
   font-size: 14px;
+  font-weight: 600;
 }
 
 .assistant-panel.is-embedded .action-button {
@@ -1007,8 +1024,8 @@ onBeforeUnmount(() => {
   padding: 12px 14px;
 }
 
-.assistant-panel.is-embedded .overall-card {
-  grid-template-columns: 122px minmax(0, 1fr);
+.assistant-panel.is-embedded .cloud-card {
+  grid-template-columns: 90px minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -1058,7 +1075,7 @@ onBeforeUnmount(() => {
 }
 
 .assistant-panel.is-embedded .legend-chip-label {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .assistant-panel.is-embedded .legend-chip-value {
@@ -1092,7 +1109,7 @@ onBeforeUnmount(() => {
     180deg,
     color-mix(
         in srgb,
-        var(--monitor-primary-soft-alt) 52%,
+        var(--monitor-danger-soft) 52%,
         var(--monitor-surface) 48%
       )
       0%,
@@ -1115,15 +1132,23 @@ onBeforeUnmount(() => {
 }
 
 .totals-dot.local {
-  background: var(--monitor-primary);
+  background: var(--monitor-success);
 }
 
 .totals-dot.cloud {
-  background: var(--monitor-cloud);
+  background: var(--monitor-danger);
 }
 
 .totals-dot.overall {
   background: var(--color-primary-deep);
+}
+
+.overall-card .totals-dot.overall {
+  background: var(--monitor-success);
+}
+
+.cloud-card .totals-dot.overall {
+  background: var(--monitor-danger);
 }
 
 .totals-bar-track {
@@ -1139,14 +1164,14 @@ onBeforeUnmount(() => {
 }
 
 .totals-bar-fill.local {
-  background: var(--monitor-primary);
+  background: var(--monitor-success);
 }
 
 .totals-bar-fill.cloud {
-  background: var(--monitor-cloud);
+  background: var(--monitor-danger);
 }
 
-.overall-card {
+.cloud-card {
   display: grid;
   grid-template-columns: 156px minmax(0, 1fr);
   gap: 14px;
@@ -1163,13 +1188,13 @@ onBeforeUnmount(() => {
     color-mix(
         in srgb,
         var(--monitor-surface) 84%,
-        var(--monitor-primary-soft) 16%
+        var(--monitor-success-soft) 16%
       )
       0%,
     color-mix(
         in srgb,
         var(--monitor-surface) 90%,
-        var(--monitor-cloud-soft) 10%
+        var(--monitor-danger-soft) 10%
       )
       100%
   );
@@ -1177,18 +1202,6 @@ onBeforeUnmount(() => {
     0 8px 18px rgba(15, 23, 42, 0.05),
     0 2px 5px rgba(15, 23, 42, 0.035),
     inset 0 1px 0 rgba(255, 255, 255, 0.32);
-}
-
-.overall-card.enhanced {
-  border-color: color-mix(
-    in srgb,
-    var(--monitor-border-soft) 76%,
-    var(--monitor-border) 24%
-  );
-  box-shadow:
-    0 12px 26px rgba(15, 23, 42, 0.05),
-    0 2px 6px rgba(15, 23, 42, 0.03),
-    inset 0 1px 0 rgba(255, 255, 255, 0.38);
 }
 
 .overall-copy {
@@ -1215,6 +1228,28 @@ onBeforeUnmount(() => {
   color: var(--color-primary-deep);
 }
 
+.cloud-card .overall-value {
+  color: var(--monitor-danger);
+}
+
+.cloud-card.cloud-consumption {
+  border-color: color-mix(
+    in srgb,
+    var(--monitor-border-accent) 72%,
+    var(--monitor-border-soft)
+  );
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--monitor-cloud-soft) 94%, transparent),
+    color-mix(in srgb, var(--monitor-primary-soft) 94%, transparent)
+  );
+  box-shadow: 0 12px 26px
+    color-mix(in srgb, var(--bg-box-shadow) 75%, transparent);
+}
+.overall-card .overall-value {
+  color: var(--monitor-success);
+}
+
 .overall-stack {
   display: flex;
   flex-direction: column;
@@ -1238,24 +1273,17 @@ onBeforeUnmount(() => {
     color-mix(
         in srgb,
         var(--monitor-surface) 80%,
-        var(--monitor-primary-soft) 20%
+        var(--monitor-success-soft) 20%
       )
       0%,
     color-mix(
         in srgb,
         var(--monitor-surface) 84%,
-        var(--monitor-cloud-soft) 16%
+        var(--monitor-danger-soft) 16%
       )
       100%
   );
   box-shadow: inset 0 1px 4px rgba(15, 23, 42, 0.08);
-}
-
-.overall-stack-track.enhanced {
-  height: 14px;
-  box-shadow:
-    inset 0 1px 4px rgba(15, 23, 42, 0.08),
-    0 1px 0 rgba(255, 255, 255, 0.48);
 }
 
 .overall-segment {
@@ -1263,8 +1291,8 @@ onBeforeUnmount(() => {
   border-radius: 0;
 }
 
-.overall-segment.local {
-  border-radius: 999px 0 0 999px;
+.overall-segment.saved {
+  border-radius: 0 999px 999px 0;
   background: linear-gradient(
     90deg,
     var(--monitor-primary) 0%,
@@ -1273,7 +1301,7 @@ onBeforeUnmount(() => {
 }
 
 .overall-segment.cloud {
-  border-radius: 0 999px 999px 0;
+  border-radius: 999px 0 0 999px;
   background: linear-gradient(
     90deg,
     color-mix(
@@ -1287,15 +1315,15 @@ onBeforeUnmount(() => {
 }
 
 .overall-legend {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
 .legend-chip {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: space-between;
   gap: 6px;
   min-width: 0;
   padding: 12px 14px;
@@ -1306,20 +1334,33 @@ onBeforeUnmount(() => {
 }
 
 .legend-chip.local {
-  color: var(--monitor-primary);
+  color: var(--monitor-success);
   background: color-mix(
     in srgb,
-    var(--monitor-primary-soft) 78%,
+    var(--monitor-success-soft) 78%,
     var(--monitor-surface) 22%
   );
   border-color: color-mix(
     in srgb,
-    var(--monitor-primary) 22%,
+    var(--monitor-success) 22%,
     var(--monitor-border) 78%
   );
 }
 
 .legend-chip.cloud {
+  color: var(--monitor-danger);
+  background: color-mix(
+    in srgb,
+    var(--monitor-danger-soft) 86%,
+    var(--monitor-surface) 14%
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--monitor-danger) 22%,
+    var(--monitor-border) 78%
+  );
+}
+.legend-chip.consumption {
   color: var(--monitor-cloud);
   background: color-mix(
     in srgb,
@@ -1351,14 +1392,34 @@ onBeforeUnmount(() => {
     180deg,
     color-mix(
         in srgb,
-        var(--monitor-primary-soft) 54%,
+        var(--monitor-success-soft) 54%,
         var(--monitor-surface) 46%
       )
       0%,
     var(--monitor-surface) 100%
   );
 }
+.cloud-panel {
+  background: linear-gradient(
+    180deg,
+    color-mix(
+        in srgb,
+        var(--monitor-danger-soft) 58%,
+        var(--monitor-surface) 42%
+      )
+      0%,
+    color-mix(
+        in srgb,
+        var(--monitor-danger-soft) 22%,
+        var(--monitor-surface) 78%
+      )
+      100%
+  );
+}
 
+.cloud-panel .section-title {
+  color: var(--monitor-danger);
+}
 .overall-panel {
   background: linear-gradient(
     180deg,
@@ -1379,23 +1440,6 @@ onBeforeUnmount(() => {
   gap: 12px;
   padding: 14px 16px;
   border-radius: 18px;
-  border: 1px solid
-    color-mix(in srgb, var(--monitor-primary) 20%, var(--monitor-border) 80%);
-  background: linear-gradient(
-    180deg,
-    color-mix(
-        in srgb,
-        var(--monitor-primary-soft) 76%,
-        var(--monitor-surface) 24%
-      )
-      0%,
-    color-mix(
-        in srgb,
-        var(--monitor-surface) 90%,
-        var(--monitor-primary-soft) 10%
-      )
-      100%
-  );
 }
 
 .local-card-head {
@@ -1417,7 +1461,7 @@ onBeforeUnmount(() => {
   line-height: 1;
   font-weight: 700;
   letter-spacing: -0.04em;
-  color: var(--monitor-primary);
+  color: var(--monitor-success);
 }
 
 .local-card-track {
@@ -1426,7 +1470,7 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   background: color-mix(
     in srgb,
-    var(--monitor-primary-soft) 40%,
+    var(--monitor-success-soft) 40%,
     var(--monitor-track) 60%
   );
 }
@@ -1436,8 +1480,8 @@ onBeforeUnmount(() => {
   border-radius: inherit;
   background: linear-gradient(
     90deg,
-    var(--monitor-primary) 0%,
-    color-mix(in srgb, var(--monitor-primary) 72%, var(--color-white) 28%) 100%
+    var(--monitor-success) 0%,
+    color-mix(in srgb, var(--monitor-success) 72%, var(--color-white) 28%) 100%
   );
 }
 
@@ -1481,32 +1525,18 @@ onBeforeUnmount(() => {
   letter-spacing: -0.04em;
 }
 
-.token-consumption-card {
-  border-color: color-mix(
-    in srgb,
-    var(--monitor-cloud) 22%,
-    var(--monitor-border) 78%
-  );
-  background: color-mix(
-    in srgb,
-    var(--monitor-cloud-soft) 76%,
-    var(--monitor-surface) 24%
-  );
-  color: var(--monitor-cloud);
-}
-
 .saved-token-card {
   border-color: color-mix(
     in srgb,
-    var(--monitor-success) 22%,
+    var(--monitor-primary) 22%,
     var(--monitor-border) 78%
   );
   background: color-mix(
     in srgb,
-    var(--monitor-success-soft) 82%,
+    var(--monitor-primary-soft) 82%,
     var(--monitor-surface) 18%
   );
-  color: var(--monitor-success);
+  color: var(--monitor-primary);
 }
 
 .compression-ring-card {
@@ -1518,22 +1548,18 @@ onBeforeUnmount(() => {
   padding: 16px 14px;
   border-radius: 20px;
   border: 1px solid
-    color-mix(in srgb, var(--monitor-success) 20%, var(--monitor-border) 80%);
+    color-mix(
+      in srgb,
+      var(--monitor-border-accent) 72%,
+      var(--monitor-border-soft)
+    );
   background: linear-gradient(
-    180deg,
-    color-mix(
-        in srgb,
-        var(--monitor-success-soft) 82%,
-        var(--monitor-surface) 18%
-      )
-      0%,
-    color-mix(
-        in srgb,
-        var(--monitor-surface) 92%,
-        var(--monitor-success-soft) 8%
-      )
-      100%
+    135deg,
+    color-mix(in srgb, var(--monitor-success-soft) 96%, transparent),
+    color-mix(in srgb, var(--monitor-danger-soft) 94%, transparent)
   );
+  box-shadow: 0 12px 26px
+    color-mix(in srgb, var(--bg-box-shadow) 75%, transparent);
 }
 
 .compression-ring-card.inline-chart {
@@ -1581,14 +1607,14 @@ onBeforeUnmount(() => {
 }
 
 .compression-ring-track {
-  stroke: var(--monitor-cloud);
+  stroke: var(--monitor-danger);
 }
 
 .compression-ring-progress {
   stroke: var(--monitor-success);
   stroke-linecap: round;
   transition: stroke-dashoffset 0.35s ease;
-  filter: drop-shadow(0 6px 10px rgba(34, 197, 94, 0.18));
+  filter: drop-shadow(0 6px 10px rgba(23, 153, 88, 0.18));
 }
 
 .compression-ring-center {
@@ -1638,5 +1664,62 @@ onBeforeUnmount(() => {
   to {
     transform: rotate(360deg);
   }
+}
+.local-wrap {
+  border: 1px solid
+    color-mix(in srgb, var(--monitor-success) 20%, var(--monitor-border) 80%);
+  background: linear-gradient(
+    180deg,
+    color-mix(
+        in srgb,
+        var(--monitor-success-soft) 76%,
+        var(--monitor-surface) 24%
+      )
+      0%,
+    color-mix(
+        in srgb,
+        var(--monitor-surface) 90%,
+        var(--monitor-success-soft) 10%
+      )
+      100%
+  );
+  color: var(--monitor-success);
+}
+.cloud-wrap {
+  border-color: color-mix(
+    in srgb,
+    var(--monitor-danger) 22%,
+    var(--monitor-border) 78%
+  );
+
+  background: linear-gradient(
+    180deg,
+    color-mix(
+        in srgb,
+        var(--monitor-danger-soft) 76%,
+        var(--monitor-surface) 24%
+      )
+      0%,
+    color-mix(
+        in srgb,
+        var(--monitor-surface) 90%,
+        var(--monitor-danger-soft) 10%
+      )
+      100%
+  );
+  color: var(--monitor-danger);
+}
+.saved-wrap {
+  border-color: color-mix(
+    in srgb,
+    var(--monitor-primary) 22%,
+    var(--monitor-border) 78%
+  );
+  background: color-mix(
+    in srgb,
+    var(--monitor-primary-soft) 82%,
+    var(--monitor-surface) 18%
+  );
+  color: var(--monitor-primary);
 }
 </style>
