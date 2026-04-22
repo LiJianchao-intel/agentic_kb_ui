@@ -82,11 +82,11 @@
               </button>
             </a-tooltip>
             <button
-              v-if="!embedded"
+              v-if="!embedded || embeddedClosable"
               class="close-button vertical-center"
               type="button"
               :title="t('monitor.close')"
-              @click="closePanel"
+              @click="handleClose"
             >
               <CloseOutlined />
             </button>
@@ -254,11 +254,16 @@ import { getTokenStats, requestTokenRest } from "@/api/knowledgeBase";
 const props = withDefaults(
   defineProps<{
     embedded?: boolean;
+    embeddedClosable?: boolean;
   }>(),
   {
     embedded: false,
+    embeddedClosable: false,
   },
 );
+const emit = defineEmits<{
+  close: [];
+}>();
 
 interface TotalInputMetrics {
   original_tokens: number;
@@ -292,9 +297,19 @@ interface MonitorData {
   compression: CompressionMetrics;
 }
 
-const POLL_INTERVAL = 2000;
+const POLL_INTERVAL = 20000000;
 const { t, locale } = useI18n();
 const embedded = computed(() => props.embedded);
+const embeddedClosable = computed(() => props.embeddedClosable);
+
+const handleClose = () => {
+  if (embedded.value) {
+    emit("close");
+    return;
+  }
+
+  closePanel();
+};
 
 const createDefaultMonitorData = (): MonitorData => ({
   token_metrics: {
@@ -916,8 +931,8 @@ onBeforeUnmount(() => {
 
 .action-button,
 .close-button {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--monitor-border);
   border-radius: 12px;
   background: var(--monitor-surface);
